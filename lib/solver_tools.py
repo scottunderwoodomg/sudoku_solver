@@ -1,57 +1,52 @@
 from grid_box import GridBox
 import copy
 
+# TODO: Add type hints to all functions
+# TODO: update dict iteration to in dict.items()
+
 
 class GridSolver:
     def __init__(self, game_grid):
         self.game_grid = game_grid
         self.grid_size = len(game_grid)
         self.box_id_list = self.generate_box_id_list(self.grid_size)
-        self.boxes = self.make_boxes(self.box_id_list, self.grid_size)
+        self.boxes = self.create_defined_boxes(self.box_id_list, self.grid_size)
 
         self.completed_game_grid = self.run_solver_attempt(
             game_grid, self.boxes, self.grid_size
         )
 
-    def combine_box_id_elements(self, row, column):
-        box_id = str(row) + "_" + str(column)
-        return box_id
-
-    def generate_box_id_list(self, grid_size):
-        box_id_list = [
-            self.combine_box_id_elements(row, column)
-            for column in range(1, grid_size + 1)
-            for row in range(1, grid_size + 1)
+    def generate_box_id_list(self):
+        return [
+            "_".join(str(row), str(col))
+            for col in range(1, self.grid_size + 1)
+            for row in range(1, self.grid_size + 1)
         ]
-        return box_id_list
 
-    def make_boxes(self, box_id_list, grid_size):
+    def create_defined_boxes(self):
         boxes = {}
-        for box in box_id_list:
-            box_name_string = box
-            box_name = GridBox(box, box_id_list, grid_size)
-
-            boxes[box_name_string] = box_name
+        for box in self.box_id_list:
+            boxes[box] = GridBox(box, self.box_id_list, self.grid_size)
 
         return boxes
 
-    def lock_initial_values(self, game_grid, boxes):
-        for box in boxes:
-            box_row = boxes[box].row_id - 1
-            box_col = boxes[box].col_id - 1
-            grid_value = game_grid[box_row][box_col]
+    def return_grid_value(self, box_attr):
+        return self.game_grid[box_attr["row_id"] - 1][box_attr["col_id"] - 1]
+
+    # TODO: Break up this function and anything else this big
+    def lock_initial_values(self):
+        for box, box_attr in self.boxes.items():
+            grid_value = self.return_grid_value(box_attr)
             if grid_value != 0:
-                boxes[box].confirmed_value = grid_value
-                boxes[box].value_options_list = [grid_value]
-            else:
-                pass
+                box_attr["confirmed_value"] = grid_value
+                box_attr["value_options_list"] = [grid_value]
 
-        return boxes
+        return self.boxes
 
     def remove_invalid_options(self, boxes):
         for box in boxes:
             if boxes[box].confirmed_value is not None:
-                primary_box_id = boxes[box].box_id
+                # primary_box_id = boxes[box].box_id
                 primary_box_value = boxes[box].confirmed_value
                 associated_boxes = boxes[box].associated_box_ids
 
@@ -159,7 +154,7 @@ class GridSolver:
     def attempt_grid_completion(
         self, boxes, confirmed_boxes, total_box_count, end_loop, loop_count
     ):
-        while confirmed_boxes < total_box_count and end_loop == False:
+        while confirmed_boxes < total_box_count and not end_loop:
             previous_confirmed_boxes = self.count_confirmed_boxes(boxes)
 
             boxes = self.remove_invalid_options(boxes)
@@ -229,7 +224,7 @@ class GridSolver:
                 total_box_count,
             )
 
-            if simulation.simulation_outcome["sucesful_simulation"] != True:
+            if not simulation.simulation_outcome["sucesful_simulation"]:
                 simulation_attempts.append(simulation)
                 original_boxes = copy.deepcopy(boxes)
                 if (
@@ -237,7 +232,7 @@ class GridSolver:
                     == simulation.simulation_box_index
                 ):
                     simulation_box_omit_list.append(simulation.simulation_box)
-            elif simulation.simulation_outcome["sucesful_simulation"] == True:
+            elif simulation.simulation_outcome["sucesful_simulation"]:
                 boxes = simulation.simulation_outcome["simulation_attempt_boxes"]
                 original_confirmed_count = total_box_count
 
@@ -308,7 +303,7 @@ class SimulationAttempt(GridSolver):
     ):
         confirmed_boxes = original_confirmed_count
         loop_count = 1
-        while confirmed_boxes < total_box_count and end_loop == False:
+        while confirmed_boxes < total_box_count and not end_loop:
             previous_confirmed_boxes = confirmed_boxes
             simulation_boxes = self.remove_invalid_options(simulation_boxes)
             simulation_boxes = self.lock_new_values(simulation_boxes)
