@@ -12,4 +12,6 @@ def get_image_size(image_file):
     return Image.open(image_file).size
 
 
-print(get_image_size("image_files/test_images/sudoku_test_image.jpg"))
+# print(get_image_size("image_files/test_images/sudoku_test_image.jpg"))
+
+print(list(range(1, 9 + 1)))

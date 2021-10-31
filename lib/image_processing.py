@@ -1,258 +1,243 @@
 import cv2
 import pytesseract
+import os
 
 from PIL import Image
+from shutil import copyfile
 
 
 """
-convert_to_bw is a function that converts the photograph of a sudoku grid 
-to black and white for improved OCR and then saves the new copy with a 
+convert_to_bw is a function that converts the photograph of a sudoku grid
+to black and white for improved OCR and then saves the new copy with a
 unique filename.
 """
 
 
-def convert_to_bw(image_file, threshold):
-    image_filename = image_file[0 : len(image_file) - 4]
+class imageProcessor:
+    def __init__(self, input_image_path, grid_size=9) -> None:
+        self.input_image_path = input_image_path
+        self.grid_size = grid_size
+        self.box_image_file_path = "image_files/box_images/"
+        self.temp_image_path = "image_files/temp_image_files/temp_image.jpg"
+        # self.image_path = self.return_image_size(input_image_path)
 
-    column = Image.open(image_file)
-    gray = column.convert("L")
-    blackwhite = gray.point(lambda x: 0 if x < threshold else 255, "1")
+        self.convert_to_bw(input_image_path)
+        self.bw_image_dimensions = self.return_image_size(
+            self.input_image_path.replace(".jpg", "_bw.jpg")
+        )
+        self.box_size_x = self.bw_image_dimensions[0] / self.grid_size
+        self.box_size_y = self.bw_image_dimensions[1] / self.grid_size
 
-    new_filename = image_filename + "_bw.jpg"
-    blackwhite.save(new_filename)
+        self.generate_crop_coordinates(self.input_image_path.replace(".jpg", "_bw.jpg"))
 
+        self.build_composite_images()
 
-def get_image_size(image_file):
-    image = Image.open(image_file)
-    image_dimensions = image.size
-    return image_dimensions
+        self.read_box_images_to_grid()
 
+    def return_image_size(self, image_file):
+        return Image.open(image_file).size
 
-def crop_image(image_file, left, upper, right, lower):
-    im = Image.open(image_file)
-    im_crop = im.crop((left, upper, right, lower))
-    return im_crop
+    def crop_image(self, image_file, left, upper, right, lower):
+        return Image.open(image_file).crop((left, upper, right, lower))
 
+    def generate_box_name(self, row_id, box_id, suffix=""):
+        return str(row_id) + "_" + str(box_id) + suffix
 
-def generate_box_name(row_id, box_id):
-    box_name = str(row_id) + "_" + str(box_id)
-    return box_name
+    def save_cropped_image(self, cropped_image, box_name):
+        cropped_image.save(self.box_image_file_path + box_name + ".jpg")
 
+    def prepare_bw_filename(self, image_file):
+        return image_file[0 : len(image_file) - 4] + "_bw.jpg"
 
-def save_cropped_image(cropped_image, box_name, file_path="image_files/box_images/"):
-    composite_file_path = file_path + box_name + ".jpg"
-    cropped_image.save(composite_file_path)
+    def convert_to_bw(self, image_file, threshold=75):
+        gray_image = Image.open(image_file).convert("L")
+        bw_image = gray_image.point(lambda x: 0 if x < threshold else 255, "1")
 
+        bw_image.save(self.prepare_bw_filename(image_file))
 
-def refine_cropped_image(
-    cropped_image, temp_image_path="image_files/temp_image_files/temp_image.jpg"
-):
-    cropped_image.save(temp_image_path)
-    image_size = get_image_size(temp_image_path)
-    trim_size = image_size[0] * 0.1
-    trimmed_image = crop_image(
-        temp_image_path,
-        trim_size,
-        trim_size,
-        (image_size[0] - trim_size),
-        (image_size[1] - trim_size),
-    )
+    def refine_cropped_image(self, cropped_image):
+        # TODO: confirm why this is being saved at the start of this function and not elsewhere
+        cropped_image.save(self.temp_image_path)
 
-    return trimmed_image
+        image_size = self.return_image_size(self.temp_image_path)
+        trim_size = image_size[0] * 0.1
 
+        return self.crop_image(
+            self.temp_image_path,
+            trim_size,
+            trim_size,
+            (image_size[0] - trim_size),
+            (image_size[1] - trim_size),
+        )
 
-# TODO: Need to break up into smaller functions
-def generate_crop_coordinates(image_file, grid_size=9):
-    image_dimensions = get_image_size(image_file)
-    image_width = image_dimensions[0]
-    image_height = image_dimensions[1]
+    def process_box_image(
+        self,
+        image_file,
+        current_left,
+        current_upper,
+        current_right,
+        current_lower,
+        row_pos,
+        box_pos,
+    ):
+        cropped_image = self.crop_image(
+            image_file,
+            current_left,
+            current_upper,
+            current_right,
+            current_lower,
+        )
 
-    box_size_x = image_width / grid_size
-    box_size_y = image_height / grid_size
+        self.save_cropped_image(
+            self.refine_cropped_image(cropped_image),
+            self.generate_box_name(row_pos, box_pos),
+        )
 
-    row_id = 1
-    current_upper = 0
-    current_lower = current_upper + box_size_y
+    # TODO: Need to break up into smaller functions
+    # TODO: Convert these into objects with their own attributes?
+    def generate_crop_coordinates(self, image_file):
+        position_list = list(range(1, self.grid_size + 1))
+        current_upper = 0
+        current_lower = current_upper + self.box_size_y
 
-    while row_id <= 9:
-        box_id = 1
-        current_left = 0
-        current_right = current_left + box_size_x
+        for row_pos in position_list:
+            current_left = 0
+            current_right = current_left + self.box_size_x
 
-        while box_id <= 9:
-            cropped_image = crop_image(
-                image_file, current_left, current_upper, current_right, current_lower
+            for box_pos in position_list:
+                self.process_box_image(
+                    image_file,
+                    current_left,
+                    current_upper,
+                    current_right,
+                    current_lower,
+                    row_pos,
+                    box_pos,
+                )
+
+                current_left += self.box_size_x
+                current_right += self.box_size_x
+
+            current_upper += self.box_size_y
+            current_lower += self.box_size_y
+
+    def get_list_of_box_names(self):
+        return set(
+            [
+                fn[0:3]
+                for fn in os.listdir(self.box_image_file_path)
+                if fn.endswith(".jpg") and "composite" not in fn
+            ]
+        )
+
+    def get_list_of_file_copy_names(self, box_name):
+        return [
+            fn
+            for fn in os.listdir(self.box_image_file_path)
+            if (box_name in fn and "composite" not in fn)
+        ]
+
+    def list_valid_filenames(self):
+        return [
+            fn
+            for fn in os.listdir(self.box_image_file_path)
+            if fn.endswith(".jpg") and len(fn) == 7
+        ]
+
+    def perform_duplication(self, fn):
+        for n in range(1, 6):
+            src = self.box_image_file_path + fn
+            dst = f"{self.box_image_file_path}{fn[0 : len(fn) - 4]}_copy{str(n)}.jpg"
+            copyfile(src, dst)
+
+    def duplicate_cropped_image(self):
+        for fn in self.list_valid_filenames():
+            self.perform_duplication(fn)
+
+    def return_dims(self, images):
+        return zip(*(i.size for i in images))
+
+    def produce_composite_images(self):
+        for box_name in self.get_list_of_box_names():
+            images = [
+                Image.open(self.box_image_file_path + x)
+                for x in self.get_list_of_file_copy_names(box_name)
+            ]
+            widths, heights = self.return_dims(images)
+
+            total_width = sum(widths)
+            max_height = max(heights)
+
+            new_im = Image.new("RGB", (total_width, max_height))
+
+            x_offset = 0
+            for im in images:
+                new_im.paste(im, (x_offset, 0))
+                x_offset += im.size[0]
+
+            new_im.save(self.box_image_file_path + box_name + "_composite.jpg")
+
+    def build_composite_images(self):
+        self.duplicate_cropped_image()
+        self.produce_composite_images()
+
+    # Read Grid From Images
+
+    def apply_threshold_change(self, box_name):
+        ret, img = cv2.threshold(
+            cv2.imread(self.box_image_file_path + box_name + ".jpg"),
+            127,
+            255,
+            cv2.THRESH_BINARY,
+        )
+        return img
+
+    # TODO: determine if this step is redundant
+    def adjust_box_threshold(self, box_name):
+        cv2.imwrite(
+            self.box_image_file_path + box_name + ".jpg",
+            self.apply_threshold_change(box_name),
+        )
+
+    def read_box_image(self, box_name):
+        return pytesseract.image_to_string(
+            self.apply_threshold_change(box_name),
+            config="--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789",
+        )
+
+    def blanks_as_zeros(self, box_value):
+        return "0" if len(box_value) == 0 else box_value
+
+    # TODO: Need to figure out what this function actually does
+    def collapse_value_text(self, box_value):
+        expanded_box_value_dict = {}
+        for char in box_value:
+            if char not in expanded_box_value_dict.keys():
+                expanded_box_value_dict[char] = 1
+            else:
+                expanded_box_value_dict[char] += 1
+
+        return max(expanded_box_value_dict, key=expanded_box_value_dict.get)
+
+    def establish_box_value(self, box_name):
+        return int(
+            self.collapse_value_text(
+                self.blanks_as_zeros(self.read_box_image(box_name))
             )
-            cropped_image = refine_cropped_image(cropped_image)
+        )
 
-            box_name = generate_box_name(row_id, box_id)
+    def read_box_images_to_grid(self, file_path="image_files/box_images/"):
+        starting_grid = [[], [], [], [], [], [], [], [], []]
+        position_list = list(range(1, self.grid_size + 1))
 
-            save_cropped_image(cropped_image, box_name)
+        for row_num in position_list:
+            for col_num in position_list:
+                box_name = self.generate_box_name(row_num, col_num, suffix="_composite")
 
-            current_left += box_size_x
-            current_right += box_size_x
-            box_id += 1
+                self.adjust_box_threshold(file_path, box_name)
 
-        current_upper += box_size_y
-        current_lower += box_size_y
-        row_id += 1
+                box_value = self.establish_box_value(box_name)
 
+                starting_grid[row_num - 1].append(box_value)
 
-convert_to_bw("image_files/test_images/sudoku_test_image.jpg", 75)
-
-generate_crop_coordinates("image_files/test_images/sudoku_test_image_bw.jpg")
-
-
-import os
-from shutil import copyfile
-
-
-def duplicate_cropped_image(directory):
-    for filename in os.listdir(directory):
-        if filename.endswith(".jpg") and len(filename) == 7:
-            base_filename = filename[0 : len(filename) - 4]
-            for n in range(1, 6):
-                copy_filename = base_filename + "_copy" + str(n) + ".jpg"
-                src = directory + filename
-                dst = directory + copy_filename
-                copyfile(src, dst)
-
-
-def get_list_of_box_names(directory):
-    box_name_list = []
-    for filename in os.listdir(directory):
-        if filename.endswith(".jpg") and "composite" not in filename:
-            box_name = filename[0:3]
-            box_name_list.append(box_name)
-    box_name_list = set(box_name_list)
-    return box_name_list
-
-
-def get_list_of_file_copy_names(box_name, directory):
-    file_name_list = []
-    for filename in os.listdir(directory):
-        if box_name in filename and "composite" not in filename:
-            file_name_list.append(filename)
-
-    return file_name_list
-
-
-def produce_composite_images(box_name_list, directory):
-    for box_name in box_name_list:
-        file_name_list = get_list_of_file_copy_names(box_name, directory)
-
-        images = [Image.open(directory + x) for x in file_name_list]
-        widths, heights = zip(*(i.size for i in images))
-
-        total_width = sum(widths)
-        max_height = max(heights)
-
-        new_im = Image.new("RGB", (total_width, max_height))
-
-        x_offset = 0
-        for im in images:
-            new_im.paste(im, (x_offset, 0))
-            x_offset += im.size[0]
-
-        composite_image_name = box_name + "_composite.jpg"
-        new_im.save(directory + composite_image_name)
-
-
-def build_composite_images(directory):
-    box_id_list = get_list_of_box_names(directory)
-
-    duplicate_cropped_image(directory)
-
-    box_name_list = get_list_of_box_names(directory)
-
-    produce_composite_images(box_name_list, directory)
-
-
-active_ditectory = "image_files/box_images/"
-
-build_composite_images(active_ditectory)
-
-
-# Read Grid From Images
-
-
-def adjust_box_threshold(file_path, box_name):
-    composite_file_path = file_path + box_name + ".jpg"
-    img = cv2.imread(composite_file_path)
-    ret, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
-    cv2.imwrite(composite_file_path, img)
-
-
-def read_box_image(
-    file_path, box_name, temp_image_path="image_files/temp_image_files/temp_image.jpg"
-):
-    composite_file_path = file_path + box_name + ".jpg"
-
-    # image_size = get_image_size(composite_file_path)
-    # cropped_image = crop_image(composite_file_path, 30, 30, (image_size[0]-30), (image_size[1]-30))
-
-    # cropped_image.save(temp_image_path)
-
-    # img = cv2.imread(temp_image_path)
-    img = cv2.imread(composite_file_path)
-    ret, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
-    text = pytesseract.image_to_string(
-        img, config="--psm 10 --oem 3 -c tessedit_char_whitelist=0123456789"
-    )
-    return text
-
-
-def collapse_value_text(box_value):
-    expanded_box_value_dict = {}
-    for char in box_value:
-        if char not in expanded_box_value_dict.keys():
-            expanded_box_value_dict[char] = 1
-        else:
-            expanded_box_value_dict[char] += 1
-
-    assumed_box_value = max(expanded_box_value_dict, key=expanded_box_value_dict.get)
-    return assumed_box_value
-
-
-def blanks_as_zeros(box_value):
-    if len(box_value) == 0:
-        return "0"
-    else:
-        return box_value
-
-
-def read_box_images_to_grid(file_path="image_files/box_images/"):
-    starting_grid = [[], [], [], [], [], [], [], [], []]
-
-    starting_row_number = 1
-
-    while starting_row_number <= 9:
-        starting_box_number = 1
-
-        while starting_box_number <= 9:
-            box_name = generate_box_name(starting_row_number, starting_box_number)
-            box_name = box_name + "_composite"
-
-            adjust_box_threshold(file_path, box_name)
-
-            box_value = read_box_image(file_path, box_name)
-
-            box_value = blanks_as_zeros(box_value)
-
-            box_value = collapse_value_text(box_value)
-
-            box_value = int(box_value)
-
-            starting_grid[starting_row_number - 1].append(box_value)
-
-            starting_box_number += 1
-
-        starting_row_number += 1
-
-    return starting_grid
-
-
-starting_grid = read_box_images_to_grid()
-
-for row in starting_grid:
-    print(row)
+        return starting_grid
