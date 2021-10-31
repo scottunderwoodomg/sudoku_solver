@@ -14,14 +14,14 @@ unique filename.
 
 
 class imageProcessor:
-    def __init__(self, input_image_path, grid_size=9) -> None:
+    def __init__(self, input_image_path, grid_size=9) -> list:
         self.input_image_path = input_image_path
         self.grid_size = grid_size
         self.box_image_file_path = "image_files/box_images/"
         self.temp_image_path = "image_files/temp_image_files/temp_image.jpg"
-        # self.image_path = self.return_image_size(input_image_path)
 
-        self.convert_to_bw(input_image_path)
+    def process(self):
+        self.convert_to_bw()
         self.bw_image_dimensions = self.return_image_size(
             self.input_image_path.replace(".jpg", "_bw.jpg")
         )
@@ -32,7 +32,7 @@ class imageProcessor:
 
         self.build_composite_images()
 
-        self.read_box_images_to_grid()
+        return self.read_box_images_to_grid()
 
     def return_image_size(self, image_file):
         return Image.open(image_file).size
@@ -46,14 +46,14 @@ class imageProcessor:
     def save_cropped_image(self, cropped_image, box_name):
         cropped_image.save(self.box_image_file_path + box_name + ".jpg")
 
-    def prepare_bw_filename(self, image_file):
-        return image_file[0 : len(image_file) - 4] + "_bw.jpg"
+    def prepare_bw_filename(self):
+        return self.input_image_path[0 : len(self.input_image_path) - 4] + "_bw.jpg"
 
-    def convert_to_bw(self, image_file, threshold=75):
-        gray_image = Image.open(image_file).convert("L")
+    def convert_to_bw(self, threshold=75):
+        gray_image = Image.open(self.input_image_path).convert("L")
         bw_image = gray_image.point(lambda x: 0 if x < threshold else 255, "1")
 
-        bw_image.save(self.prepare_bw_filename(image_file))
+        bw_image.save(self.prepare_bw_filename())
 
     def refine_cropped_image(self, cropped_image):
         # TODO: confirm why this is being saved at the start of this function and not elsewhere
@@ -206,7 +206,7 @@ class imageProcessor:
         )
 
     def blanks_as_zeros(self, box_value):
-        return "0" if len(box_value) == 0 else box_value
+        return "0" if len(box_value) == 0 or box_value == "\x0c" else box_value
 
     # TODO: Need to figure out what this function actually does
     def collapse_value_text(self, box_value):
@@ -234,7 +234,7 @@ class imageProcessor:
             for col_num in position_list:
                 box_name = self.generate_box_name(row_num, col_num, suffix="_composite")
 
-                self.adjust_box_threshold(file_path, box_name)
+                self.adjust_box_threshold(box_name)
 
                 box_value = self.establish_box_value(box_name)
 
