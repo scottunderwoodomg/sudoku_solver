@@ -47,7 +47,7 @@ class imageProcessor:
         cropped_image.save(self.box_image_file_path + box_name + ".jpg")
 
     def prepare_bw_filename(self):
-        return self.input_image_path[0 : len(self.input_image_path) - 4] + "_bw.jpg"
+        return self.input_image_path[0: len(self.input_image_path) - 4] + "_bw.jpg"
 
     def convert_to_bw(self, threshold=75):
         gray_image = Image.open(self.input_image_path).convert("L")

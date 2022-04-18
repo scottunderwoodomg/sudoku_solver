@@ -19,8 +19,8 @@ class GridBox:
         self.box_setup()
 
     def box_setup(self):
-        self.confirmed_value = None
-        self.value_options_list = self.make_value_option_list()
+        self.confirmed_val = None
+        self.val_opts_list = self.make_val_opt_list()
 
         self.box_y_coord = self.box_id[0]
         self.box_x_coord = self.box_id[2]
@@ -32,7 +32,7 @@ class GridBox:
         self.associated_col_boxes = self.get_associated_col_boxes()
         self.associated_square_boxes = self.get_associated_square_boxes()
 
-    def make_value_option_list(self):
+    def make_val_opt_list(self):
         return [n for n in range(1, self.grid_size + 1)]
 
     def get_row_id(self, id):
