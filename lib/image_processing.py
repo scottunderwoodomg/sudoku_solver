@@ -13,7 +13,7 @@ unique filename.
 """
 
 
-class imageProcessor:
+class ImageProcessor:
     def __init__(self, input_image_path, grid_size=9) -> list:
         self.input_image_path = input_image_path
         self.grid_size = grid_size

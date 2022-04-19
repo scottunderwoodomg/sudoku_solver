@@ -27,10 +27,10 @@ class GridBox:
 
         self.square_id = self.get_square_id(self.box_id)
 
-        self.associated_box_ids = self.create_list_of_associated_box_ids()
-        self.associated_row_boxes = self.get_associated_row_boxes()
-        self.associated_col_boxes = self.get_associated_col_boxes()
-        self.associated_square_boxes = self.get_associated_square_boxes()
+        self.assoc_box_ids = self.create_list_of_assoc_box_ids()
+        self.assoc_row_boxes = self.get_assoc_row_boxes()
+        self.assoc_col_boxes = self.get_assoc_col_boxes()
+        self.assoc_square_boxes = self.get_assoc_square_boxes()
 
     def make_val_opt_list(self):
         return [n for n in range(1, self.grid_size + 1)]
@@ -41,25 +41,25 @@ class GridBox:
     def get_col_id(self, id):
         return int(id[2])
 
-    def get_square_index(self):
-        if int(self.box_id) < (self.grid_size * 0.34):
+    def get_square_index(self, id):
+        if int(id) < (self.grid_size * 0.34):
             return "1"
-        elif int(self.box_id) > (self.grid_size * 0.67):
+        elif int(id) > (self.grid_size * 0.67):
             return "3"
         else:
             return "2"
 
     def get_square_id(self, id):
-        square_y = self.get_square_index(id[0], self.grid_size)
-        square_x = self.get_square_index(id[2], self.grid_size)
+        square_y = self.get_square_index(id[0])
+        square_x = self.get_square_index(id[2])
 
         return "_".join([square_y, square_x])
 
-    def x_coord_match(self, id):
-        return self.get_row_id(id) == self.box_y_coord
-
     def y_coord_match(self, id):
-        return self.get_col_id(id) == self.box_x_coord
+        return self.get_row_id(id) == int(self.box_y_coord)
+
+    def x_coord_match(self, id):
+        return self.get_col_id(id) == int(self.box_x_coord)
 
     def square_match(self, id):
         return self.get_square_id(id) == self.square_id
@@ -73,22 +73,22 @@ class GridBox:
         ) and self.not_self(id)
 
     # TODO: See if this step of creating a list of associated ids is redundant
-    def create_list_of_associated_box_ids(self):
+    def create_list_of_assoc_box_ids(self):
         return [b for b in self.box_id_list if self.any_valid_match(b)]
 
-    def get_associated_row_boxes(self):
+    def get_assoc_row_boxes(self):
         return [
-            b for b in self.associated_box_ids if self.get_row_id(b) == self.box_y_coord
+            b for b in self.assoc_box_ids if self.get_row_id(b) == int(self.box_y_coord)
         ]
 
-    def get_associated_col_boxes(self):
+    def get_assoc_col_boxes(self):
         return [
-            b for b in self.associated_box_ids if self.get_col_id(b) == self.box_x_coord
+            b for b in self.assoc_box_ids if self.get_col_id(b) == int(self.box_x_coord)
         ]
 
-    def get_associated_square_boxes(self):
+    def get_assoc_square_boxes(self):
         return [
             b
-            for b in self.associated_box_ids
+            for b in self.assoc_box_ids
             if self.get_square_id(b) == self.square_id
         ]
