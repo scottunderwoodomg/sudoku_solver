@@ -72,7 +72,6 @@ class GridBox:
             self.x_coord_match(id) or self.y_coord_match(id) or self.square_match(id)
         ) and self.not_self(id)
 
-    # TODO: See if this step of creating a list of associated ids is redundant
     def create_list_of_assoc_box_ids(self):
         return [b for b in self.box_id_list if self.any_valid_match(b)]
 
