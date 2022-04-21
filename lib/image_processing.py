@@ -1,6 +1,7 @@
 import cv2
 import pytesseract
 import os
+import os.path
 
 from PIL import Image
 from shutil import copyfile
@@ -20,6 +21,8 @@ class ImageProcessor:
         self.box_image_file_path = "image_files/box_images/"
         self.temp_image_path = "image_files/temp_image_files/temp_image.jpg"
 
+        self.processed_grid = self.run_processor()
+
     def process(self):
         self.convert_to_bw()
         self.bw_image_dimensions = self.return_image_size(
@@ -33,6 +36,17 @@ class ImageProcessor:
         self.build_composite_images()
 
         return self.read_box_images_to_grid()
+
+    def image_cleanup(self):
+        for root, dirs, files in os.walk(self.box_image_file_path):
+            for file in files:
+                os.remove(os.path.join(root, file))
+
+    def run_processor(self):
+        game_grid = self.process()
+        self.image_cleanup()
+
+        return game_grid
 
     def return_image_size(self, image_file):
         return Image.open(image_file).size

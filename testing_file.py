@@ -1,6 +1,6 @@
 #from PIL import Image
 
-#from lib.Image_processing import imageProcessor
+from lib.image_processing import ImageProcessor
 from lib.solver_tools import GridSolver
 
 """
@@ -19,12 +19,12 @@ def get_image_size(image_file):
 
 # print(list(range(1, 9 + 1)))
 
-#processor = imageProcessor("image_files/test_images/sudoku_test_image.jpg")
-#result = processor.process()
+grid = ImageProcessor("image_files/test_images/sudoku_test_image.jpg").processed_grid
 
-#for r in result:
-#    print(r)
+for r in grid:
+    print(r)
 
+print("########################")
 
 med = [
     [0, 6, 0, 2, 0, 0, 3, 1, 9],
@@ -62,7 +62,7 @@ evil_board = [
     [3, 0, 0, 0, 0, 0, 0, 0, 8],
 ]
 
-result = GridSolver(evil_board)
+result = GridSolver(grid)
 
 for r in result.completed_game_grid:
     print(r)
