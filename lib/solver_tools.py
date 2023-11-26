@@ -14,7 +14,8 @@ class GridSolver:
         self.box_id_list = self.generate_box_id_list()
         self.boxes = self.create_defined_boxes()
 
-        self.completed_game_grid = self.run_solver_attempt()
+        #TODO: this should be removed from the init to avoid the dependency issue
+        #self.completed_game_grid = self.run_solver_attempt()
 
     def generate_box_id_list(self):
         return [

@@ -27,10 +27,12 @@ class GridBox:
 
         self.square_id = self.get_square_id(self.box_id)
 
-        self.assoc_box_ids = self.create_list_of_assoc_box_ids()
         self.assoc_row_boxes = self.get_assoc_row_boxes()
         self.assoc_col_boxes = self.get_assoc_col_boxes()
         self.assoc_square_boxes = self.get_assoc_square_boxes()
+        self.assoc_box_ids = set(
+            self.assoc_row_boxes + self.assoc_col_boxes + self.assoc_square_boxes
+        )
 
     def make_val_opt_list(self):
         return [n for n in range(1, self.grid_size + 1)]
@@ -67,27 +69,23 @@ class GridBox:
     def not_self(self, id):
         return id != self.box_id
 
-    def any_valid_match(self, id):
-        return (
-            self.x_coord_match(id) or self.y_coord_match(id) or self.square_match(id)
-        ) and self.not_self(id)
-
-    def create_list_of_assoc_box_ids(self):
-        return [b for b in self.box_id_list if self.any_valid_match(b)]
-
     def get_assoc_row_boxes(self):
         return [
-            b for b in self.assoc_box_ids if self.get_row_id(b) == int(self.box_y_coord)
+            b
+            for b in self.box_id_list
+            if self.get_row_id(b) == int(self.box_y_coord) and self.not_self(b)
         ]
 
     def get_assoc_col_boxes(self):
         return [
-            b for b in self.assoc_box_ids if self.get_col_id(b) == int(self.box_x_coord)
+            b
+            for b in self.box_id_list
+            if self.get_col_id(b) == int(self.box_x_coord) and self.not_self(b)
         ]
 
     def get_assoc_square_boxes(self):
         return [
             b
-            for b in self.assoc_box_ids
-            if self.get_square_id(b) == self.square_id
+            for b in self.box_id_list
+            if self.get_square_id(b) == self.square_id and self.not_self(b)
         ]
