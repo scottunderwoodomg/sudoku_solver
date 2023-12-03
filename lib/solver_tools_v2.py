@@ -9,6 +9,8 @@ class GridSolver2:
         self.total_box_count = self.grid_size**2
         self.box_id_list = self.generate_box_id_list()
         self.boxes = self.create_defined_boxes()
+        # TODO: begin building out logic_application_loops record once I have ability to count locks
+        # self.logic_application_loops = {}
 
         # TODO: this should be removed from the init to avoid the dependency issue
         # self.completed_game_grid = self.run_solver_attempt()
@@ -33,28 +35,21 @@ class GridSolver2:
         12. find y-wings
 
         """
-        for box, box_attr in self.boxes.items():
-            print(box, box_attr.confirmed_val, box_attr.val_opts_list)
+        self.debug_output()
 
-        print("########################")
         self.apply_initial_vals()
 
-        for box, box_attr in self.boxes.items():
-            print(box, box_attr.confirmed_val, box_attr.val_opts_list)
+        self.debug_output()
 
-        print("########################")
         self.reconcile_and_lock_associated_options()
         self.reconcile_and_lock_associated_options()
         self.reconcile_and_lock_associated_options()
 
-        for box, box_attr in self.boxes.items():
-            print(box, box_attr.confirmed_val, box_attr.val_opts_list)
+        self.debug_output()
 
-        print("########################")
         self.reconcile_hidden_singles()
 
-        for box, box_attr in self.boxes.items():
-            print(box, box_attr.confirmed_val, box_attr.val_opts_list)
+        self.debug_output()
 
         pass
 
@@ -141,6 +136,23 @@ class GridSolver2:
 
         self.lock_sole_options()
         return self.boxes
+
+    def count_locked_values(self):
+        locked_val_cnt = 0
+        for box, box_attr in self.boxes.items():
+            if box_attr.confirmed_val is not None:
+                locked_val_cnt += 1
+
+        return locked_val_cnt
+
+    def debug_output(self, type="partial"):
+        print("Count of locked values: ", self.count_locked_values())
+
+        if type == "full":
+            for box, box_attr in self.boxes.items():
+                print(box, box_attr.confirmed_val, box_attr.val_opts_list)
+
+        print("########################")
 
     """
     def reconcile_hidden_singles(self):
