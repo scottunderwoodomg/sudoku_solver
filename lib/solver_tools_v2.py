@@ -10,7 +10,7 @@ class GridSolver2:
         self.box_id_list = self.generate_box_id_list()
         self.boxes = self.create_defined_boxes()
         # TODO: begin building out logic_application_loops record once I have ability to count locks
-        # self.logic_application_loops = {}
+        self.logic_application_loops = {}
 
         # TODO: this should be removed from the init to avoid the dependency issue
         # self.completed_game_grid = self.run_solver_attempt()
@@ -35,23 +35,31 @@ class GridSolver2:
         12. find y-wings
 
         """
-        self.debug_output()
 
-        self.apply_initial_vals()
+        for n in range(1, 12):
+            if n == 1:
+                self.apply_initial_vals()
+            # TODO: introduce a persisted stuck flag that informs additional logic is attempted
+            elif n < 3:
+                self.reconcile_and_lock_associated_options()
+            elif n < 6:
+                self.reconcile_hidden_singles()
+                self.reconcile_and_lock_associated_options()
+            else:
+                self.reconcile_naked_pairs()
+                self.reconcile_hidden_singles()
+                self.reconcile_and_lock_associated_options()
 
-        self.debug_output()
+            self.capture_logic_application_loop(n)
+            # self.debug_output()
+            # self.debug_output(type="full")
 
-        self.reconcile_and_lock_associated_options()
-        self.reconcile_and_lock_associated_options()
-        self.reconcile_and_lock_associated_options()
-
-        self.debug_output()
-
-        self.reconcile_hidden_singles()
-
-        self.debug_output()
-
+        self.debug_output(type="full")
         pass
+
+    # TODO: Define "logic packages" with combinations of the other methods stored
+    #   and called from a dictionary that are applied in escalating fashion as
+    #   the solver stops making progress
 
     # Produces a list of all the possible box_id's based on grid size
     # TODO: Potentially does not need to be run on its own in the init?
@@ -137,6 +145,27 @@ class GridSolver2:
         self.lock_sole_options()
         return self.boxes
 
+    def reconcile_naked_pairs(self):
+        for box, box_attr in self.boxes.items():
+            if len(box_attr.val_opts_list) == 2:
+                for associated_set in [
+                    box_attr.assoc_row_boxes,
+                    box_attr.assoc_col_boxes,
+                    box_attr.assoc_square_boxes,
+                ]:
+                    for comp_box in associated_set:
+                        if self.boxes[comp_box].val_opts_list == box_attr.val_opts_list:
+                            for non_comp_box in associated_set:
+                                if non_comp_box != comp_box:
+                                    self.boxes[non_comp_box].val_opts_list = list(
+                                        set(
+                                            self.boxes[non_comp_box].val_opts_list
+                                        ).difference(box_attr.val_opts_list)
+                                    )
+
+        self.lock_sole_options()
+        return self.boxes
+
     def count_locked_values(self):
         locked_val_cnt = 0
         for box, box_attr in self.boxes.items():
@@ -145,8 +174,15 @@ class GridSolver2:
 
         return locked_val_cnt
 
+    def capture_logic_application_loop(self, loop_num, complexity_level="test"):
+        self.logic_application_loops[loop_num] = {
+            "solver_complexity_level": complexity_level,
+            "locked_values": self.count_locked_values(),
+        }
+
     def debug_output(self, type="partial"):
-        print("Count of locked values: ", self.count_locked_values())
+        for key, values in self.logic_application_loops.items():
+            print(key, values)
 
         if type == "full":
             for box, box_attr in self.boxes.items():
