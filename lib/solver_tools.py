@@ -14,8 +14,8 @@ class GridSolver:
         self.box_id_list = self.generate_box_id_list()
         self.boxes = self.create_defined_boxes()
 
-        #TODO: this should be removed from the init to avoid the dependency issue
-        #self.completed_game_grid = self.run_solver_attempt()
+        # TODO: this should be removed from the init to avoid the dependency issue
+        # self.completed_game_grid = self.run_solver_attempt()
 
     def generate_box_id_list(self):
         return [
@@ -32,7 +32,9 @@ class GridSolver:
         return boxes
 
     def return_grid_val(self, box_attr):
-        return self.game_grid[int(box_attr.box_y_coord) - 1][int(box_attr.box_x_coord) - 1]
+        return self.game_grid[int(box_attr.box_y_coord) - 1][
+            int(box_attr.box_x_coord) - 1
+        ]
 
     # TODO: Break up this function and anything else this big
     def lock_initial_vals(self):
@@ -62,8 +64,8 @@ class GridSolver:
         for box in boxes:
             if boxes[box].confirmed_val is not None:
                 boxes = self.check_assoc_box_vals(box, boxes)
-            else:
-                pass
+            # else:
+            #    pass
 
         return boxes
 
@@ -160,7 +162,9 @@ class GridSolver:
 
     def write_to_grid(self, game_grid, boxes):
         for box in boxes:
-            game_grid[int(boxes[box].box_y_coord) - 1][int(boxes[box].box_x_coord) - 1] = boxes[box].confirmed_val
+            game_grid[int(boxes[box].box_y_coord) - 1][
+                int(boxes[box].box_x_coord) - 1
+            ] = boxes[box].confirmed_val
 
         return game_grid
 
@@ -184,17 +188,17 @@ class GridSolver:
     def process_invalid_opts_infered(self, boxes):
         return self.lock_new_and_infered_vals(self.remove_invalid_opts_infered(boxes))
 
-    def prepare_attempt_results(self, boxes, confirmed_boxes, end_loop, sucesful_simulation=None):
+    def prepare_attempt_results(
+        self, boxes, confirmed_boxes, end_loop, sucesful_simulation=None
+    ):
         return {
             "attempt_boxes": boxes,
             "confirmed_boxes": confirmed_boxes,
             "loop_ended": end_loop,
-            "sucesful_simulation": sucesful_simulation
+            "sucesful_simulation": sucesful_simulation,
         }
 
-    def attempt_grid_completion(
-        self, boxes, confirmed_boxes, end_loop
-    ):
+    def attempt_grid_completion(self, boxes, confirmed_boxes, end_loop):
         while confirmed_boxes < self.total_box_count and not end_loop:
             previous_confirmed_boxes = self.count_confirmed_boxes(boxes)
             boxes = self.process_invalid_opts_infered(self.process_invalid_opts(boxes))
@@ -205,13 +209,13 @@ class GridSolver:
         return self.prepare_attempt_results(boxes, confirmed_boxes, end_loop)
 
     # TODO: Likely remove, appears to not be used
-    #def revert_simulated_val(self, boxes, simulation_box):
+    # def revert_simulated_val(self, boxes, simulation_box):
     #    boxes[simulation_box].confirmed_val = None
     #    boxes[simulation_box].val_opts_list = boxes["simulation_box"].val_opts_list
     #    return boxes
 
     # TODO: Likely remove, appears to not be used
-    #def get_max_potential_val(self, potential_vals):
+    # def get_max_potential_val(self, potential_vals):
     #    max_improvement = 0
     #    best_potential_val = None
     #    for val in potential_vals:
@@ -220,15 +224,13 @@ class GridSolver:
     #            best_potential_val = potential_vals[val]
     #    return best_potential_val
 
-    #TODO: Break this up once I confirm how the simulation attempts are intended to work
+    # TODO: Break this up once I confirm how the simulation attempts are intended to work
     def complete_game_grid(self):
         boxes = self.lock_initial_vals()
         confirmed_boxes = self.count_confirmed_boxes(boxes)
         end_loop = False
 
-        attempt_results = self.attempt_grid_completion(
-            boxes, confirmed_boxes, end_loop
-        )
+        attempt_results = self.attempt_grid_completion(boxes, confirmed_boxes, end_loop)
         boxes = attempt_results["attempt_boxes"]
         original_confirmed_count = attempt_results["confirmed_boxes"]
 
@@ -250,10 +252,7 @@ class GridSolver:
             if not sim.simulation_outcome["sucesful_simulation"]:
                 simulation_attempts.append(sim)
                 original_boxes = copy.deepcopy(boxes)
-                if (
-                    sim.simulation_box_max_index
-                    == sim.simulation_box_index
-                ):
+                if sim.simulation_box_max_index == sim.simulation_box_index:
                     simulation_box_omit_list.append(sim.simulation_box)
             elif sim.simulation_outcome["sucesful_simulation"]:
                 boxes = sim.simulation_outcome["attempt_boxes"]
@@ -264,7 +263,7 @@ class GridSolver:
         return completed_game_grid
 
     def run_solver_attempt(self):
-        #boxes = self.process_invalid_opts(self.lock_initial_vals())
+        # boxes = self.process_invalid_opts(self.lock_initial_vals())
 
         return self.complete_game_grid()
 
@@ -287,7 +286,9 @@ class SimulationAttempt(GridSolver):
         self.simulation_box = self.find_shortest_opts_list(
             original_boxes, simulation_box_omit_list
         )
-        self.simulation_box_index = self.get_next_simulation_box_index(simulation_attempts)
+        self.simulation_box_index = self.get_next_simulation_box_index(
+            simulation_attempts
+        )
         self.simulation_box_max_index = (
             len(original_boxes[self.simulation_box].val_opts_list) - 1
         )
@@ -308,7 +309,9 @@ class SimulationAttempt(GridSolver):
         confirmed_boxes = self.original_confirmed_count
         while confirmed_boxes < self.total_box_count and not end_loop:
             previous_confirmed_boxes = confirmed_boxes
-            simulation_boxes = self.process_invalid_opts_infered(self.process_invalid_opts(self.simulation_boxes))
+            simulation_boxes = self.process_invalid_opts_infered(
+                self.process_invalid_opts(self.simulation_boxes)
+            )
             confirmed_boxes = self.count_confirmed_boxes(simulation_boxes)
             sucesful_simulation = False
             if (previous_confirmed_boxes == confirmed_boxes - 1) or (
@@ -321,7 +324,9 @@ class SimulationAttempt(GridSolver):
             ):
                 sucesful_simulation = True
 
-        return self.prepare_attempt_results(simulation_boxes, confirmed_boxes, end_loop, sucesful_simulation)
+        return self.prepare_attempt_results(
+            simulation_boxes, confirmed_boxes, end_loop, sucesful_simulation
+        )
 
     def find_shortest_opts_list(self, boxes, test_box_omit_list):
         shortest_list_length = 9
@@ -341,12 +346,12 @@ class SimulationAttempt(GridSolver):
     def is_first_simulation_attempt(self, simulation_attempts):
         return len(simulation_attempts) == 0
 
-    #TODO: Unclear how if at all this is being used, potentially remove
+    # TODO: Unclear how if at all this is being used, potentially remove
     def get_next_simulation_id(self, simulation_attempts):
         if self.is_first_simulation_attempt(simulation_attempts):
             return 1
         else:
-            #TODO: This potentially can just be the len of sim attempts?
+            # TODO: This potentially can just be the len of sim attempts?
             return self.get_latest_simulation(simulation_attempts).simulation_id + 1
 
     def get_latest_simulation(self, simulation_attempts):
@@ -356,8 +361,12 @@ class SimulationAttempt(GridSolver):
         if self.is_first_simulation_attempt(simulation_attempts):
             next_simulation_box_index = 0
         else:
-            latest_simulation_box = self.get_latest_simulation(simulation_attempts).simulation_box
-            latest_simulation_box_index = self.get_latest_simulation(simulation_attempts).simulation_box_index
+            latest_simulation_box = self.get_latest_simulation(
+                simulation_attempts
+            ).simulation_box
+            latest_simulation_box_index = self.get_latest_simulation(
+                simulation_attempts
+            ).simulation_box_index
 
             if self.simulation_box != latest_simulation_box:
                 next_simulation_box_index = 0
